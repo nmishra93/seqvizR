@@ -1,17 +1,18 @@
 # Nitesh Mishra
 # 2023-12-28
-# GitHub Repository: [Your Repository Link]
+# GitHub Repository: https://github.com/nmishra93/seqvizR
 
 # Script Overview:
-# This R script is designed to process a set of amino acid sequences assumed to be of equal length, typically used in sequence alignments. It reads the sequences from a file named "seqs.txt" and modifies each sequence based on a reference sequence (hook) obtained from the first sequence. The modified sequences are stored in the 'result' vector.
+# This R script processes a set of amino acid sequences assumed to be of equal length, typically used in sequence alignments. It reads the sequences from a file named "seqs.txt" and modifies each sequence based on a reference sequence (hook) obtained from the first sequence. The modified sequences are stored in the 'result' vector. The script then generates a visual representation of the modified sequences using ggplot2, depicting residue variations at each position across multiple sequences.
 
 # Detailed Explanation:
 
+# Load necessary libraries
 library(tidyverse)
-
 theme_set(
     ggthemes::theme_few()
 )
+
 # Step 1: Read amino acid sequences from a file named "seqs.txt" into aa_seqs
 aa_seqs <- readLines("data/seqs.txt")
 
@@ -56,3 +57,60 @@ for (seq in aa_seqs) {
 
 # Step 7: Remove all variables from the global environment except aa_seqs and result
 rm(list = setdiff(ls(), c("aa_seqs", "result")), envir = .GlobalEnv)
+
+# Step 8: Create a data frame for ggplot2
+sequence_names <- seq_along(result)
+
+alignment_df <- tibble(
+    sequence_name = rep(sequence_names, each = nchar(result[1])),
+    position = rep(1:nchar(result[1]), times = length(result)),
+    residue = unlist(strsplit(result, ""))
+) |>
+    mutate(
+        sequence_name = factor(sequence_name),
+        position = factor(position),
+        rug_position = as.numeric(sequence_name)
+    )
+
+# Step 9: Plot the sequence alignment using ggplot2
+alignment_df |>
+    ggplot(
+        aes(
+            x = position,
+            xend = position,
+            y = rug_position - 0.3,
+            yend = rug_position + 0.3,
+            color = residue
+        )
+    ) +
+    geom_segment(
+        linewidth = 0.3,
+    ) +
+    coord_cartesian(
+        expand = FALSE
+    ) +
+    scale_color_manual(values = c("." = "white", "A" = "red", "E" = "blue", "F" = "green", "I" = "purple", "K" = "orange", "L" = "yellow", "Q" = "pink", "R" = "brown", "S" = "cyan", "Y" = "magenta", "-" = "gray")) +
+    scale_y_continuous(
+        breaks = 1:20,
+        labels = sequence_names
+    ) +
+    scale_x_discrete(
+        breaks = seq(0, 60, 5),
+        labels = seq(0, 60, 5)
+    ) +
+    labs(
+        x = "Position",
+        y = ""
+    ) +
+    guides(color = guide_legend(
+        title = "Residue",
+        nrow = 1
+    )) +
+    theme(
+        axis.text = element_text(size = 9),
+        axis.title = element_text(size = 10),
+        legend.position = "bottom",
+        panel.border = element_blank(),
+        axis.ticks = element_line(linewidth = 0.1),
+        axis.ticks.length = unit(0.1, "cm"),
+    )
